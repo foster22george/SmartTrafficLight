@@ -36,7 +36,7 @@ class TrafficLightEnv(gym.Env):
         
         self.observation_space = spaces.Dict({
             "cars": spaces.Box(low=0, high=self.maxCars, shape=(4,), dtype=np.int32),
-            "peds": [False, False]
+            "peds": spaces.MultiBinary(2)
         })
         
         # Define action space
@@ -55,7 +55,7 @@ class TrafficLightEnv(gym.Env):
         return {
             "steps": self.steps,
             "total_cars_waiting": np.sum(self.state["cars"]),
-            "peds_waiting": self.observation_space.peds[0] or self.observation_space.peds[1]
+            "peds_waiting": self.state["peds"][0] or self.state["peds"][1]
         }
     
     def reset(self):
@@ -63,7 +63,7 @@ class TrafficLightEnv(gym.Env):
         # set random num of cars and set peds
         self.state = {
             "cars": self.np_random.integers(0, self.maxCars // 2, size=4, dtype=np.int32),
-            "peds": self.np_random.boolean(2)
+            "peds": self.np_random.integers(0, 2, size=2, dtype=np.int8)
         }
         self.steps = 0
         
@@ -76,53 +76,62 @@ class TrafficLightEnv(gym.Env):
         self.steps += 1
         waitingPeds = False
         waitingCars = 0
+        helpedPeds = 0
 
         lightGreen, time = action
         duration = (time + 1) * 4
 
         #North-South light is green
         if lightGreen == 0 : 
-            carsThrough = math.floor(duration / 2.5)
-            self.observation_space.cars[0] = self.observation_space.cars[0] - carsThrough
-            self.observation_space.cars[1] = self.observation_space.cars[1] - carsThrough
+            carsThrough = math.floor(duration / 4.5)
+            self.state["cars"][0] = self.state["cars"][0] - carsThrough
+            self.state["cars"][1] = self.state["cars"][1] - carsThrough
             
-            if duration > 5 and self.observation_space.peds[0] == True: 
+            if duration > 5 and self.state["peds"][0] == True: 
                 helpedPeds = True
-                self.observation_space.peds[0] = False
+                self.state["peds"][0] = False
 
 
         # East- West light is green
         else : 
-            carsThrough = math.floor(duration / 2.5)
-            self.observation_space.cars[2] = self.observation_space.cars[2] - carsThrough
-            self.observation_space.cars[3] = self.observation_space.cars[3] - carsThrough
+            carsThrough = math.floor(duration / 4.5)
+            self.state["cars"][2] = self.state["cars"][2] - carsThrough
+            self.state["cars"][3] = self.state["cars"][3] - carsThrough
 
-            if duration > 5 and self.observation_space.peds[1] == True : 
+            if duration > 5 and self.state["peds"][1] == True : 
                 helpedPeds = True
-                self.observation_space.peds[1] = False
+                self.state["peds"][1] = False
 
         waitingCars = np.sum(self.state["cars"])
-        if (self.observation_space.peds[0] or self.observation_space.peds[1]) : 
+        if (self.state["peds"][0] or self.state["peds"][1]) : 
             waitingPeds = True
 
         #add cars 
-        self.observation_space.cars[0] += self.np_random.poisson(self.nCarArrivalRate * duration)
-        self.observation_space.cars[1] += self.np_random.poisson(self.sCarArrivalRate * duration)
-        self.observation_space.cars[2] += self.np_random.poisson(self.eCarArrivalRate * duration)
-        self.observation_space.cars[3] += self.np_random.poisson(self.wCarArrivalRate * duration)
+        self.state["cars"][0] += self.np_random.poisson(self.nCarArrivalRate * duration)
+        self.state["cars"][1] += self.np_random.poisson(self.sCarArrivalRate * duration)
+        self.state["cars"][2] += self.np_random.poisson(self.eCarArrivalRate * duration)
+        self.state["cars"][3] += self.np_random.poisson(self.wCarArrivalRate * duration)
 
         #make sure not over the max
-        self.observation_space.cars[0] = max(self.observation_space.cars[0], self.maxCars)
-        self.observation_space.cars[1] = max(self.observation_space.cars[1], self.maxCars)
-        self.observation_space.cars[2] = max(self.observation_space.cars[2], self.maxCars)
-        self.observation_space.cars[3] = max(self.observation_space.cars[3], self.maxCars)
+        self.state["cars"][0] = min(self.state["cars"][0], self.maxCars)
+        self.state["cars"][1] = min(self.state["cars"][1], self.maxCars)
+        self.state["cars"][2] = min(self.state["cars"][2], self.maxCars)
+        self.state["cars"][3] = min(self.state["cars"][3], self.maxCars)
+
+        #make sure not negative
+        self.state["cars"][0] = max(self.state["cars"][0], 0)
+        self.state["cars"][1] = max(self.state["cars"][1], 0)
+        self.state["cars"][2] = max(self.state["cars"][2], 0)
+        self.state["cars"][3] = max(self.state["cars"][3], 0)
+
+
 
         #add people
-        if np.random(0,1) <= self.pPedArrivesNS : 
-            self.observation_space.peds[0] = True
+        if self.np_random.random() <= self.pPedArrivesNS : 
+            self.state["peds"][0] = True
 
-        if np.random(0,1) <= self.pPedArrivesEW : 
-            self.observation_space.peds[1] = True
+        if self.np_random.random() <= self.pPedArrivesEW : 
+            self.state["peds"][1] = True
 
         reward = carsThrough + (5 * helpedPeds) - (0.1 * duration) - (.5 * waitingCars) - (5 * waitingPeds)
 
