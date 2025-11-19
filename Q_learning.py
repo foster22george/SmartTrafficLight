@@ -31,6 +31,19 @@ EPSILON = 1.0
 DECAY_RATE = 0.995
 MAX_STEPS = 100
 
+
+def get_run_number():
+    # Read current run number
+    with open("run_counter.txt", "r") as f:
+        run_num = int(f.read().strip())
+    
+    return run_num
+
+def increment_run_number():
+    run_num = get_run_number() + 1
+    with open("run_counter.txt", "w") as f:
+        f.write(str(run_num))
+
 #----------------
 #HELPER FUNCTIONS
 #----------------
@@ -166,7 +179,9 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
     plt.legend()
     plt.grid(alpha=0.3)
     plt.tight_layout()
-    plt.savefig(f"traffic_rewards_{num_episodes}.png", dpi=300)
+    run_num = get_run_number()
+    plot_filename = f"results/plots/traffic_rewards_run_{run_num}.png"
+    plt.savefig(plot_filename, dpi=300)
     plt.close()
 
     return Q_table
@@ -188,8 +203,13 @@ if train_flag:
     Q_table = Q_learning(num_episodes=num_episodes, gamma=GAMMA, epsilon=EPSILON, decay_rate=decay_rate)
 
     # Save the trained Q-table
-    with open(f"Q_table_{num_episodes}_{decay_rate}.pickle", "wb") as handle:
+    run_num = get_run_number()
+    q_filename = f"results/q_tables/Q_table_run_{run_num}.pickle"
+    with open(q_filename, "wb") as handle:
         pickle.dump(Q_table, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    # increment run counter AFTER saving
+    increment_run_number()  
 
 # ---------------
 # EVALUATION MODE

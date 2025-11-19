@@ -32,7 +32,7 @@ class TrafficLightEnv(gym.Env):
         self.pPedArrivesNS = 0.33
         self.pPedArrivesEW = 0.25
         
-
+        self.fairness_weight = 0.25
         
         self.observation_space = spaces.Dict({
             "cars": spaces.Box(low=0, high=self.maxCars, shape=(4,), dtype=np.int32),
@@ -92,7 +92,7 @@ class TrafficLightEnv(gym.Env):
             self.state["cars"][1] = self.state["cars"][1] - carsThrough
             
             if duration > 5 and self.state["peds"][0] == True: 
-                helpedPeds = True
+                helpedPeds = 1
                 self.state["peds"][0] = False
 
 
@@ -103,12 +103,17 @@ class TrafficLightEnv(gym.Env):
             self.state["cars"][3] = self.state["cars"][3] - carsThrough
 
             if duration > 5 and self.state["peds"][1] == True : 
-                helpedPeds = True
+                helpedPeds = 1
                 self.state["peds"][1] = False
 
         waitingCars = np.sum(self.state["cars"])
         if (self.state["peds"][0] or self.state["peds"][1]) : 
             waitingPeds = True
+
+        # Fairness metrics: compare total NS vs total EW queues
+        cars_NS = self.state["cars"][0] + self.state["cars"][1]
+        cars_EW = self.state["cars"][2] + self.state["cars"][3]
+        fairness_gap = abs(cars_NS - cars_EW)
 
         #add cars 
         self.state["cars"][0] += self.np_random.poisson(self.nCarArrivalRate * duration)
@@ -137,7 +142,7 @@ class TrafficLightEnv(gym.Env):
         if self.np_random.random() <= self.pPedArrivesEW : 
             self.state["peds"][1] = True
 
-        reward = carsThrough + (5 * helpedPeds) - (0.1 * duration) - (.5 * waitingCars) - (5 * waitingPeds)
+        reward = carsThrough + (5 * helpedPeds) - (0.1 * duration) - (.5 * waitingCars) - (5 * waitingPeds) - self.fairness_weight * fairness_gap
 
         terminated = False  
         truncated = self.steps >= 100  
@@ -149,7 +154,12 @@ class TrafficLightEnv(gym.Env):
             "cars_served": carsThrough,
             "peds_served": helpedPeds,
             "light_direction": "N-S" if lightGreen == 0 else "E-W",
-            "duration": duration
+            "duration": duration,
+            "waiting_cars": waitingCars,
+            "waiting_peds": waitingPeds,
+            "cars_NS": cars_NS,
+            "cars_EW": cars_EW,
+            "fairness_gap": fairness_gap,
         })
         
         return observation, reward, terminated, truncated, info
