@@ -58,7 +58,11 @@ class TrafficLightEnv(gym.Env):
             "peds_waiting": self.state["peds"][0] or self.state["peds"][1]
         }
     
-    def reset(self):
+    def reset(self, seed=None):
+        super().reset(seed=seed)
+
+        # initialize the environment RNG properly
+        self.np_random = np.random.default_rng(seed)
 
         # set random num of cars and set peds
         self.state = {
