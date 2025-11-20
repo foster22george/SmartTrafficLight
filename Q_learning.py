@@ -122,6 +122,9 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
     episode_fairness = []
     #avg waiting cars per episode
     episode_waiting_cars = []
+    #avg ns and ew waiting cars per episode
+    episode_ns_waiting_cars = []
+    episode_ew_waiting_cars = []
 
     print(f"{BOLD}Starting training for {num_episodes} episodes...{RESET}")
 
@@ -133,6 +136,8 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
         steps = 0
         fairness_sum = 0.0
         waiting_cars_sum = 0.0
+        ew_waiting_cars_sum = 0.0
+        ns_waiting_cars_sum = 0.0
 
         while not (terminated or truncated) and steps < MAX_STEPS:
             # Initialize Q and N entries
@@ -150,6 +155,8 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
             next_obs, reward, terminated, truncated, info = env.step(action)
             fairness_sum += info["fairness_gap"]
             waiting_cars_sum += info["waiting_cars"]
+            ns_waiting_cars_sum += info["cars_NS"]
+            ew_waiting_cars_sum += info["cars_EW"]
             next_state = discretize_state(next_obs)
 
             if next_state not in Q_table:
@@ -175,9 +182,13 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
         if steps > 0:
             episode_fairness.append(fairness_sum / steps)
             episode_waiting_cars.append(waiting_cars_sum / steps)
+            episode_ew_waiting_cars.append(ew_waiting_cars_sum / steps)
+            episode_ns_waiting_cars.append(ns_waiting_cars_sum / steps)
         else:
             episode_fairness.append(0.0)
             episode_waiting_cars.append(0.0)
+            episode_ew_waiting_cars.append(info["cars_EW"])
+            episode_ns_waiting_cars.append(info["cars_NS"])
 
     print(f"{BOLD}Training complete!{RESET}")
 
@@ -215,6 +226,30 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
     fair_plot_filename = f"results/plots/fairness/fairness_run_{run_num}.png"
     plt.savefig(fair_plot_filename, dpi=300)
     plt.close()
+
+
+      # Plot North-South and East-West waiting cars per episode
+      plt.figure(figsize=(10, 6))
+      plt.plot(episode_ew_waiting_cars, label='East-West Waiting Cars', alpha=0.5)
+      plt.plot(episode_ns_waiting_cars, label='North-South Waiting Cars', alpha=0.5)
+      if len(episode_fairness) > 10:
+          #East-West
+          window = min(50, len(episode_ew_waiting_cars)//5)
+          moving_avg_ew = np.convolve(episode_ew_waiting_cars, np.ones(window)/window, mode='valid')
+          plt.plot(range(window-1, len(episode_ew_waiting_cars)), moving_avg_ew, color='red', label='Moving Average for East-West')
+          #North-South
+          window = min(50, len(episode_ns_waiting_cars)//5)
+          moving_avg_ns = np.convolve(episode_ns_waiting_cars, np.ones(window)/window, mode='valid')
+          plt.plot(range(window-1, len(episode_ns_waiting_cars)), moving_avg_ns, color='red', label='Moving Average for North-South')
+      plt.title(f"North-South and East-West Waiting Cars per Episode (episodes={num_episodes})")
+      plt.xlabel("Episode")
+      plt.ylabel("Waiting Cars")
+      plt.legend()
+      plt.grid(alpha=0.3)
+      plt.tight_layout()
+      directional_waiting_cars_filename = f"results/plots/waiting_cars{run_num}.png"
+      plt.savefig(directional_waiting_cars_filename, dpi=300)
+      plt.close()
 
     return Q_table
 
