@@ -1,0 +1,47 @@
+###############
+# OS Files
+###############
+.DS_Store
+
+###############
+# Python Cache
+###############
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+###############
+# Virtual Environments
+###############
+venv/
+env/
+.venv/
+
+###############
+# Jupyter / Misc
+###############
+.ipynb_checkpoints/
+
+###############
+# Runtime / Temp Files
+###############
+run_counter.txt
+*.log
+
+###############
+# Results (plots + Q-tables)
+###############
+results/plots/rewards/*.png
+results/plots/fairness/*.png
+results/plots/waiting_cars/*.png
+results/q_tables/*.pickle
+
+# Allow directory structures but ignore files
+results/plots/*
+!results/plots/rewards/
+!results/plots/fairness/
+!results/plots/waiting_cars/
+
+results/q_tables/
+!results/q_tables/
