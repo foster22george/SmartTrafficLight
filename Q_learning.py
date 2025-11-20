@@ -228,28 +228,28 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
     plt.close()
 
 
-      # Plot North-South and East-West waiting cars per episode
-      plt.figure(figsize=(10, 6))
-      plt.plot(episode_ew_waiting_cars, label='East-West Waiting Cars', alpha=0.5)
-      plt.plot(episode_ns_waiting_cars, label='North-South Waiting Cars', alpha=0.5)
-      if len(episode_fairness) > 10:
-          #East-West
-          window = min(50, len(episode_ew_waiting_cars)//5)
-          moving_avg_ew = np.convolve(episode_ew_waiting_cars, np.ones(window)/window, mode='valid')
-          plt.plot(range(window-1, len(episode_ew_waiting_cars)), moving_avg_ew, color='red', label='Moving Average for East-West')
-          #North-South
-          window = min(50, len(episode_ns_waiting_cars)//5)
-          moving_avg_ns = np.convolve(episode_ns_waiting_cars, np.ones(window)/window, mode='valid')
-          plt.plot(range(window-1, len(episode_ns_waiting_cars)), moving_avg_ns, color='red', label='Moving Average for North-South')
-      plt.title(f"North-South and East-West Waiting Cars per Episode (episodes={num_episodes})")
-      plt.xlabel("Episode")
-      plt.ylabel("Waiting Cars")
-      plt.legend()
-      plt.grid(alpha=0.3)
-      plt.tight_layout()
-      directional_waiting_cars_filename = f"results/plots/waiting_cars{run_num}.png"
-      plt.savefig(directional_waiting_cars_filename, dpi=300)
-      plt.close()
+    # Plot North-South and East-West waiting cars per episode
+    plt.figure(figsize=(10, 6))
+    plt.plot(episode_ew_waiting_cars, label='East-West Waiting Cars', alpha=0.5)
+    plt.plot(episode_ns_waiting_cars, label='North-South Waiting Cars', alpha=0.5)
+    if len(episode_fairness) > 10:
+        #East-West
+        window = min(50, len(episode_ew_waiting_cars)//5)
+        moving_avg_ew = np.convolve(episode_ew_waiting_cars, np.ones(window)/window, mode='valid')
+        plt.plot(range(window-1, len(episode_ew_waiting_cars)), moving_avg_ew, color='red', label='Moving Average for East-West')
+        #North-South
+        window = min(50, len(episode_ns_waiting_cars)//5)
+        moving_avg_ns = np.convolve(episode_ns_waiting_cars, np.ones(window)/window, mode='valid')
+        plt.plot(range(window-1, len(episode_ns_waiting_cars)), moving_avg_ns, color='red', label='Moving Average for North-South')
+    plt.title(f"North-South and East-West Waiting Cars per Episode (episodes={num_episodes})")
+    plt.xlabel("Episode")
+    plt.ylabel("Waiting Cars")
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    directional_waiting_cars_filename = f"results/plots/waiting_cars{run_num}.png"
+    plt.savefig(directional_waiting_cars_filename, dpi=300)
+    plt.close()
 
     return Q_table
 
