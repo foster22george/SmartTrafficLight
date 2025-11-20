@@ -118,6 +118,10 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
     Q_table = {}
     N_table = {}
     episode_rewards = []
+    #avg fairness_gap per episode
+    episode_fairness = []
+    #avg waiting cars per episode
+    episode_waiting_cars = []
 
     print(f"{BOLD}Starting training for {num_episodes} episodes...{RESET}")
 
@@ -127,6 +131,8 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
         total_reward = 0
         terminated = truncated = False
         steps = 0
+        fairness_sum = 0.0
+        waiting_cars_sum = 0.0
 
         while not (terminated or truncated) and steps < MAX_STEPS:
             # Initialize Q and N entries
@@ -142,6 +148,8 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
 
             action = unflatten_action(action_idx)
             next_obs, reward, terminated, truncated, info = env.step(action)
+            fairness_sum += info["fairness_gap"]
+            waiting_cars_sum += info["waiting_cars"]
             next_state = discretize_state(next_obs)
 
             if next_state not in Q_table:
@@ -164,6 +172,13 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
         episode_rewards.append(total_reward)
         epsilon *= decay_rate
 
+        if steps > 0:
+            episode_fairness.append(fairness_sum / steps)
+            episode_waiting_cars.append(waiting_cars_sum / steps)
+        else:
+            episode_fairness.append(0.0)
+            episode_waiting_cars.append(0.0)
+
     print(f"{BOLD}Training complete!{RESET}")
 
     # Plot training rewards
@@ -180,8 +195,25 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
     plt.grid(alpha=0.3)
     plt.tight_layout()
     run_num = get_run_number()
-    plot_filename = f"results/plots/traffic_rewards_run_{run_num}.png"
+    plot_filename = f"results/plots/rewards/traffic_rewards_run_{run_num}.png"
     plt.savefig(plot_filename, dpi=300)
+    plt.close()
+
+    # Plot fairness gap per episode
+    plt.figure(figsize=(10, 6))
+    plt.plot(episode_fairness, label='Average Fairness Gap', alpha=0.5)
+    if len(episode_fairness) > 10:
+        window = min(50, len(episode_fairness)//5)
+        moving_avg_fair = np.convolve(episode_fairness, np.ones(window)/window, mode='valid')
+        plt.plot(range(window-1, len(episode_fairness)), moving_avg_fair, color='red', label='Moving Average')
+    plt.title(f"Average Fairness Gap per Episode (episodes={num_episodes})")
+    plt.xlabel("Episode")
+    plt.ylabel("Fairness Gap (|cars_NS - cars_EW|)")
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    fair_plot_filename = f"results/plots/fairness/fairness_run_{run_num}.png"
+    plt.savefig(fair_plot_filename, dpi=300)
     plt.close()
 
     return Q_table
