@@ -32,7 +32,7 @@ class TrafficLightEnv(gym.Env):
         self.pPedArrivesNS = 0.33
         self.pPedArrivesEW = 0.25
         
-        self.fairness_weight = 0.25
+        self.fairness_weight = 1.0
         
         self.observation_space = spaces.Dict({
             "cars": spaces.Box(low=0, high=self.maxCars, shape=(4,), dtype=np.int32),
@@ -142,7 +142,14 @@ class TrafficLightEnv(gym.Env):
         if self.np_random.random() <= self.pPedArrivesEW : 
             self.state["peds"][1] = True
 
-        reward = carsThrough + (5 * helpedPeds) - (0.1 * duration) - (.5 * waitingCars) - (5 * waitingPeds) - self.fairness_weight * fairness_gap
+        reward = (
+            4 * carsThrough
+            + 10 * helpedPeds
+            - 0.1 * duration
+            - 0.5 * waitingCars
+            - self.fairness_weight * fairness_gap
+            - 2.0 * waitingPeds
+        )
 
         terminated = False  
         truncated = self.steps >= 100  
@@ -163,10 +170,3 @@ class TrafficLightEnv(gym.Env):
         })
         
         return observation, reward, terminated, truncated, info
-
-
-            
-            
-
-
-    
