@@ -24,12 +24,12 @@ gui_flag = 'gui' in sys.argv      # placeholder for future visualization
 # Environment setup
 env = TrafficLightEnv()
 
-#Hyperparameters
-EPISODES = 300
-GAMMA = 0.9
+#Improved Hyperparameters
+EPISODES = 3000
+GAMMA = 0.95
 EPSILON = 1.0
-DECAY_RATE = 0.995
-MAX_STEPS = 100
+DECAY_RATE = 0.9992
+MAX_STEPS = 120
 
 
 def get_run_number():
@@ -247,7 +247,7 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
     plt.legend()
     plt.grid(alpha=0.3)
     plt.tight_layout()
-    directional_waiting_cars_filename = f"results/plots/waiting_cars{run_num}.png"
+    directional_waiting_cars_filename = f"results/plots/waiting_cars/waiting_cars{run_num}.png"
     plt.savefig(directional_waiting_cars_filename, dpi=300)
     plt.close()
 
