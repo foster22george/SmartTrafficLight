@@ -74,9 +74,6 @@ class TrafficLightEnv(gym.Env):
         # initialize the environment RNG properly
         self.np_random = np.random.default_rng(seed)
 
-        # set random num of cars and set peds
-        cars_init = self.np_random.integers(0, self.maxCars // 2, size=4, dtype=np.int32)
-
         self.state = {
             "cars": self.np_random.integers(0, self.maxCars // 2, size=4, dtype=np.int32),
             "peds": self.np_random.integers(0, 2, size=2, dtype=np.int8)
@@ -102,13 +99,26 @@ class TrafficLightEnv(gym.Env):
         lightGreen, time = action
         duration = (time + 1) * 4
 
+        # Calculate base capacity
+        # Cars accelerate for first ~2 seconds before coming to constant speed (around 4 seconds per car)
+        base_capacity = math.floor(0.25 * duration * (1 - math.exp(-duration / 2)))
+
         #North-South light is green
         if lightGreen == 0 : 
-            # Cars accelerate for ~2 seconds, then reach a realistic flow rate (~0.25 cars/sec, 1 car every 4s)
-            carsThrough = math.floor(0.25 * duration * (1 - math.exp(-duration / 2)))
-            self.state["cars"][0] = self.state["cars"][0] - carsThrough
-            self.state["cars"][1] = self.state["cars"][1] - carsThrough
+            # Left turns slow down the lane
+            slow_N = 0.6 if self.left_turn[0] > 0 else 1.0
+            slow_S = 0.6 if self.left_turn[1] > 0 else 1.0
+
+            # Calculate throughput
+            carsThrough_N = min(self.state["cars"][0], math.floor(base_capacity * slow_N))
+            carsThrough_S = min(self.state["cars"][1], math.floor(base_capacity * slow_S))
             
+            # Update queues
+            self.state["cars"][0] -= carsThrough_N
+            self.state["cars"][1] -= carsThrough_S
+
+            carsThrough = carsThrough_N + carsThrough_S
+
             if duration > 5 and self.state["peds"][0] == True: 
                 helpedPeds = 1
                 self.state["peds"][0] = False
@@ -116,12 +126,22 @@ class TrafficLightEnv(gym.Env):
 
         # East- West light is green
         else : 
-            # Realistic car acceleration for East-West cars
-            carsThrough = math.floor(0.25 * duration * (1 - math.exp(-duration / 2)))
-            self.state["cars"][2] = self.state["cars"][2] - carsThrough
-            self.state["cars"][3] = self.state["cars"][3] - carsThrough
+            # Left turns slow down the lane
+            slow_E = 0.6 if self.left_turn[2] > 0 else 1.0
+            slow_W = 0.6 if self.left_turn[3] > 0 else 1.0
 
-            if duration > 5 and self.state["peds"][1] == True : 
+            # Calculate throughput
+            carsThrough_E = min(self.state["cars"][2], math.floor(base_capacity * slow_E))
+            carsThrough_W = min(self.state["cars"][3], math.floor(base_capacity * slow_W))
+
+            # Update queues
+            self.state["cars"][2] -= carsThrough_E
+            self.state["cars"][3] -= carsThrough_W
+
+            carsThrough = carsThrough_E + carsThrough_W
+
+            # Pedestrians crossing E-W
+            if duration > 7 and self.state["peds"][1]:
                 helpedPeds = 1
                 self.state["peds"][1] = False
 
