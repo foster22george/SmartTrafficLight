@@ -44,4 +44,4 @@ results/plots/*
 !results/plots/waiting_cars/
 
 results/q_tables/
-!results/q_tables/
+!results/q_tables/.DS_Store
