@@ -125,20 +125,30 @@ class TrafficLightEnv(gym.Env):
                 helpedPeds = 1
                 self.state["peds"][1] = False
 
-        waitingCars = np.sum(self.state["cars"])
-        if (self.state["peds"][0] or self.state["peds"][1]) : 
-            waitingPeds = True
-
         # Fairness metrics: compare total NS vs total EW queues
         cars_NS = self.state["cars"][0] + self.state["cars"][1]
         cars_EW = self.state["cars"][2] + self.state["cars"][3]
         fairness_gap = abs(cars_NS - cars_EW)
 
-        #add cars 
-        self.state["cars"][0] += self.np_random.poisson(self.nCarArrivalRate * duration)
-        self.state["cars"][1] += self.np_random.poisson(self.sCarArrivalRate * duration)
-        self.state["cars"][2] += self.np_random.poisson(self.eCarArrivalRate * duration)
-        self.state["cars"][3] += self.np_random.poisson(self.wCarArrivalRate * duration)
+        # Add arriving cars and split into left/straight/right turn queues
+        def add_arrivals(rate, idx):
+            incoming = self.np_random.poisson(rate * duration)
+            if incoming <= 0:
+                return
+            left = math.floor(incoming * self.left_prob)
+            right = math.floor(incoming * self.right_prob)
+            straight = incoming - left - right
+            # update turning queues
+            self.left_turn[idx] += left
+            self.right_turn[idx] += right
+            # total cars in this direction = straight + left + right
+            self.state["cars"][idx] += incoming
+        
+        #add cars
+        add_arrivals(self.nCarArrivalRate, 0)  # North
+        add_arrivals(self.sCarArrivalRate, 1)  # South
+        add_arrivals(self.eCarArrivalRate, 2)  # East
+        add_arrivals(self.wCarArrivalRate, 3)  # West
 
         #make sure not over the max
         self.state["cars"][0] = min(self.state["cars"][0], self.maxCars)
@@ -153,13 +163,16 @@ class TrafficLightEnv(gym.Env):
         self.state["cars"][3] = max(self.state["cars"][3], 0)
 
 
-
         #add people
         if self.np_random.random() <= self.pPedArrivesNS : 
             self.state["peds"][0] = True
 
         if self.np_random.random() <= self.pPedArrivesEW : 
             self.state["peds"][1] = True
+
+        waitingCars = np.sum(self.state["cars"])
+        if (self.state["peds"][0] or self.state["peds"][1]) : 
+            waitingPeds = True
 
         reward = carsThrough + (5 * helpedPeds) - (0.1 * duration) - (.5 * waitingCars) - (5 * waitingPeds) - self.fairness_weight * fairness_gap
 
