@@ -103,6 +103,27 @@ class TrafficLightEnv(gym.Env):
         # Cars accelerate for first ~2 seconds before coming to constant speed (around 4 seconds per car)
         base_capacity = math.floor(0.25 * duration * (1 - math.exp(-duration / 2)))
 
+        # Helper function to consume turning cars from the queues
+        def consume_turning(cars_to_move, idx):
+            """ 
+            When cars pass through, consume turning cars first (left + right),
+            then straight cars. This keeps turning queues realistic.
+            """
+            if cars_to_move <= 0:
+                return
+
+            # Remove left-turners first
+            left_used = min(self.left_turn[idx], cars_to_move)
+            self.left_turn[idx] -= left_used
+            cars_to_move -= left_used
+
+            # Remove right-turners next
+            right_used = min(self.right_turn[idx], cars_to_move)
+            self.right_turn[idx] -= right_used
+            cars_to_move -= right_used
+
+            # Any remaining cars are straight cars (no extra queue for these)
+
         #North-South light is green
         if lightGreen == 0 : 
             # Left turns slow down the lane
@@ -114,7 +135,10 @@ class TrafficLightEnv(gym.Env):
             carsThrough_S = min(self.state["cars"][1], math.floor(base_capacity * slow_S))
             
             # Update queues
+            consume_turning(carsThrough_N, 0)
             self.state["cars"][0] -= carsThrough_N
+
+            consume_turning(carsThrough_S, 1)
             self.state["cars"][1] -= carsThrough_S
 
             carsThrough = carsThrough_N + carsThrough_S
@@ -135,7 +159,10 @@ class TrafficLightEnv(gym.Env):
             carsThrough_W = min(self.state["cars"][3], math.floor(base_capacity * slow_W))
 
             # Update queues
+            consume_turning(carsThrough_E, 2)
             self.state["cars"][2] -= carsThrough_E
+
+            consume_turning(carsThrough_W, 3)
             self.state["cars"][3] -= carsThrough_W
 
             carsThrough = carsThrough_E + carsThrough_W
