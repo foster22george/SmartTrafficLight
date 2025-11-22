@@ -32,8 +32,18 @@ class TrafficLightEnv(gym.Env):
         self.pPedArrivesNS = 0.33
         self.pPedArrivesEW = 0.25
         
-        self.fairness_weight = 1.0
+        self.fairness_weight = 0.25
         
+        #Turning Behavior Parameters
+        # left_turn[i], right_turn[i] keep track of turning queues in each direction
+        # Direction order: [North, South, East, West]
+        self.left_turn = np.zeros(4, dtype=np.int32)
+        self.right_turn = np.zeros(4, dtype=np.int32)
+
+        # Cars that will be turning left/right
+        self.left_prob = 0.15   # ~15% of cars turn left
+        self.right_prob = 0.10  # ~10% of cars turn right
+
         self.observation_space = spaces.Dict({
             "cars": spaces.Box(low=0, high=self.maxCars, shape=(4,), dtype=np.int32),
             "peds": spaces.MultiBinary(2)
@@ -87,7 +97,8 @@ class TrafficLightEnv(gym.Env):
 
         #North-South light is green
         if lightGreen == 0 : 
-            carsThrough = math.floor(duration / 4.5)
+            # Cars accelerate for ~2 seconds, then reach a realistic flow rate (~0.25 cars/sec, 1 car every 4s)
+            carsThrough = math.floor(0.25 * duration * (1 - math.exp(-duration / 2)))
             self.state["cars"][0] = self.state["cars"][0] - carsThrough
             self.state["cars"][1] = self.state["cars"][1] - carsThrough
             
@@ -98,7 +109,8 @@ class TrafficLightEnv(gym.Env):
 
         # East- West light is green
         else : 
-            carsThrough = math.floor(duration / 4.5)
+            # Realistic car acceleration for East-West cars
+            carsThrough = math.floor(0.25 * duration * (1 - math.exp(-duration / 2)))
             self.state["cars"][2] = self.state["cars"][2] - carsThrough
             self.state["cars"][3] = self.state["cars"][3] - carsThrough
 
@@ -142,14 +154,7 @@ class TrafficLightEnv(gym.Env):
         if self.np_random.random() <= self.pPedArrivesEW : 
             self.state["peds"][1] = True
 
-        reward = (
-            4 * carsThrough
-            + 10 * helpedPeds
-            - 0.1 * duration
-            - 0.5 * waitingCars
-            - self.fairness_weight * fairness_gap
-            - 2.0 * waitingPeds
-        )
+        reward = carsThrough + (5 * helpedPeds) - (0.1 * duration) - (.5 * waitingCars) - (5 * waitingPeds) - self.fairness_weight * fairness_gap
 
         terminated = False  
         truncated = self.steps >= 100  
@@ -170,3 +175,10 @@ class TrafficLightEnv(gym.Env):
         })
         
         return observation, reward, terminated, truncated, info
+
+
+            
+            
+
+
+    
