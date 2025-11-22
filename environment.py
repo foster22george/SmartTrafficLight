@@ -75,10 +75,17 @@ class TrafficLightEnv(gym.Env):
         self.np_random = np.random.default_rng(seed)
 
         # set random num of cars and set peds
+        cars_init = self.np_random.integers(0, self.maxCars // 2, size=4, dtype=np.int32)
+
         self.state = {
             "cars": self.np_random.integers(0, self.maxCars // 2, size=4, dtype=np.int32),
             "peds": self.np_random.integers(0, 2, size=2, dtype=np.int8)
         }
+
+        # initialize turning queues (start with no particular turning cars)
+        self.left_turn = np.zeros(4, dtype=np.int32)
+        self.right_turn = np.zeros(4, dtype=np.int32)
+
         self.steps = 0
         
         observation = self._get_obs()
