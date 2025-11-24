@@ -280,6 +280,9 @@ if train_flag:
     # increment run counter AFTER saving
     increment_run_number()  
 
+# -----------
+# BASELINES
+# -----------
 def fixed_timing_baseline(episodes=200):
     """Baseline: simple alternating 30-second lights."""
     rewards = []
@@ -296,6 +299,27 @@ def fixed_timing_baseline(episodes=200):
                 break
         rewards.append(total_reward)
     return np.mean(rewards)
+
+def random_policy_baseline(episodes=200):
+    """Baseline: uniformly random traffic light choices."""
+    rewards = []
+    for _ in tqdm(range(episodes), desc="Random Policy Baseline"):
+        obs, _ = env.reset()
+        total_reward = 0
+
+        for step in range(100):
+            # direction ∈ {0, 1}, duration ∈ {0..19}
+            action = (np.random.randint(0, 2), np.random.randint(0, 20))
+            obs, reward, terminated, truncated, _ = env.step(action)
+            total_reward += reward
+
+            if terminated or truncated:
+                break
+
+        rewards.append(total_reward)
+
+    return np.mean(rewards)
+
 
 # ---------------
 # EVALUATION MODE
@@ -356,6 +380,8 @@ if not train_flag:
     print(f"Average reward: {np.mean(rewards):.2f}")
     baseline = fixed_timing_baseline(episodes=200)
     print(f"Fixed Timing Baseline Reward: {baseline:.2f}")
+    random_baseline = random_policy_baseline(episodes=200)
+    print(f"Random Policy Baseline Reward: {random_baseline:.2f}")
     print(f"Total time: {end_time - start_time:.2f}s")
     print("=" * 60 + "\n")
 
