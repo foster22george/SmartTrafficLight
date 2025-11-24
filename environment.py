@@ -16,7 +16,7 @@ class TrafficLightEnv(gym.Env):
     Action Space: 
         Tuple(Discrete(2), Discrete(20))
         - First element: which light is green (0=N-S, 1=E-W)
-        - Second element: duration multiplier (0-19, representing 3, 6, 9, 12, 15, ..., 60, seconds)
+        - Second element: duration multiplier (0-19, representing 4, 8, 12, 16, ..., 80, seconds)
     """
 
   
@@ -128,7 +128,12 @@ class TrafficLightEnv(gym.Env):
 
         # Right turn on red logic
         def right_turn_on_red(red_dirs, ped_idx):
-        
+            """
+            Right-turn-on-red realism:
+            - If pedestrians crossing this axis -> NO right turns
+            - If the opposing direction has left-turners -> right turn is BLOCKED
+            (because left-turners cross the right-turn path)
+            """
             # If pedestrians are crossing this axis → no right turns allowed
             if self.state["peds"][ped_idx]:
                 return 0
@@ -140,6 +145,13 @@ class TrafficLightEnv(gym.Env):
             for d in red_dirs:
                 queue = self.right_turn[d]
                 if queue <= 0:
+                    continue
+
+                 # Opposing direction index
+                opposite = (d + 2) % 4
+
+                # If opposing left-turners exist → block right turn entirely
+                if self.left_turn[opposite] > 0:
                     continue
 
                 moved = min(queue, rt_capacity)
