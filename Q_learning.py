@@ -7,6 +7,8 @@ import time
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+import glob, os
+
 from tqdm import tqdm
 from environment import TrafficLightEnv
 
@@ -289,8 +291,14 @@ def softmax(x, temp=1.0):
     return e_x / e_x.sum(axis=0)
 
 if not train_flag:
-    filename = f"Q_table_{EPISODES}_{DECAY_RATE}.pickle"
-    input(f"\n{BOLD}Loading saved Q-table from {filename}{RESET}. Press Enter to continue.\n")
+    files = glob.glob("results/q_tables/*.pickle")
+    if len(files) == 0:
+        raise FileNotFoundError("❌ No Q-table found. Run training first:  python Q_learning.py train")
+
+    # choose the most recent
+    filename = max(files, key=os.path.getctime)
+
+    print(f"\n{BOLD}Loading saved Q-table: {filename}{RESET}\n")
 
     with open(filename, "rb") as f:
         Q_table = pickle.load(f)
