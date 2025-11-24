@@ -44,6 +44,8 @@ class TrafficLightEnv(gym.Env):
         self.left_prob = 0.15   # ~15% of cars turn left
         self.right_prob = 0.10  # ~10% of cars turn right
 
+        self.right_on_red_rate = 0.3   # cars per second, slow trickle
+
         self.observation_space = spaces.Dict({
             "cars": spaces.Box(low=0, high=self.maxCars, shape=(4,), dtype=np.int32),
             "peds": spaces.MultiBinary(2)
@@ -124,8 +126,37 @@ class TrafficLightEnv(gym.Env):
 
             # Any remaining cars are straight cars (no extra queue for these)
 
+        # Right turn on red logic
+        def right_turn_on_red(red_dirs, ped_idx):
+        
+            # If pedestrians are crossing this axis → no right turns allowed
+            if self.state["peds"][ped_idx]:
+                return 0
+
+            total_moved = 0
+
+            for d in red_dirs:
+                queue = self.right_turn[d]
+                if queue <= 0:
+                    continue
+
+                # right-turn trickle capacity based on duration
+                rt_capacity = math.floor(self.right_on_red_rate * duration)
+                moved = min(queue, rt_capacity)
+
+                # update turning queue and main car queue
+                self.right_turn[d] -= moved
+                self.state["cars"][d] -= moved
+
+                total_moved += moved
+
+            return total_moved
+
         #North-South light is green
         if lightGreen == 0 : 
+            # right-turners can turn on red (from EW)
+            right_turns = right_turn_on_red([2, 3], ped_idx=1)
+
             # Left turns slow down the lane
             slow_N = 0.6 if self.left_turn[0] > 0 else 1.0
             slow_S = 0.6 if self.left_turn[1] > 0 else 1.0
@@ -142,6 +173,7 @@ class TrafficLightEnv(gym.Env):
             self.state["cars"][1] -= carsThrough_S
 
             carsThrough = carsThrough_N + carsThrough_S
+            carsThrough += right_turns
 
             if duration > 5 and self.state["peds"][0] == True: 
                 helpedPeds = 1
@@ -150,6 +182,9 @@ class TrafficLightEnv(gym.Env):
 
         # East- West light is green
         else : 
+            #right turners can turn (from NS)
+            right_turns = right_turn_on_red([0, 1], ped_idx=0)
+
             # Left turns slow down the lane
             slow_E = 0.6 if self.left_turn[2] > 0 else 1.0
             slow_W = 0.6 if self.left_turn[3] > 0 else 1.0
@@ -166,6 +201,7 @@ class TrafficLightEnv(gym.Env):
             self.state["cars"][3] -= carsThrough_W
 
             carsThrough = carsThrough_E + carsThrough_W
+            carsThrough += right_turns
 
             # Pedestrians crossing E-W
             if duration > 7 and self.state["peds"][1]:
