@@ -280,6 +280,23 @@ if train_flag:
     # increment run counter AFTER saving
     increment_run_number()  
 
+def fixed_timing_baseline(episodes=200):
+    """Baseline: simple alternating 30-second lights."""
+    rewards = []
+    for _ in tqdm(range(episodes), desc="Fixed-Timing Baseline"):
+        obs, _ = env.reset()
+        total_reward = 0
+        light = 0  # Start with N-S
+        for step in range(100):
+            action = (light, 7)  # 7 * 4 seconds = 28 sec
+            obs, reward, terminated, truncated, _ = env.step(action)
+            total_reward += reward
+            light = 1 - light  # flip direction
+            if terminated or truncated:
+                break
+        rewards.append(total_reward)
+    return np.mean(rewards)
+
 # ---------------
 # EVALUATION MODE
 # ---------------
@@ -337,6 +354,8 @@ if not train_flag:
     print(f"{BOLD}Evaluation Summary{RESET}")
     print(f"Total episodes: {total_eval_episodes}")
     print(f"Average reward: {np.mean(rewards):.2f}")
+    baseline = fixed_timing_baseline(episodes=200)
+    print(f"Fixed Timing Baseline Reward: {baseline:.2f}")
     print(f"Total time: {end_time - start_time:.2f}s")
     print("=" * 60 + "\n")
 
