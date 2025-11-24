@@ -134,14 +134,14 @@ class TrafficLightEnv(gym.Env):
                 return 0
 
             total_moved = 0
+            rt_capacity = math.floor(self.right_on_red_rate * duration)
+
 
             for d in red_dirs:
                 queue = self.right_turn[d]
                 if queue <= 0:
                     continue
 
-                # right-turn trickle capacity based on duration
-                rt_capacity = math.floor(self.right_on_red_rate * duration)
                 moved = min(queue, rt_capacity)
 
                 # update turning queue and main car queue
@@ -167,13 +167,12 @@ class TrafficLightEnv(gym.Env):
             
             # Update queues
             consume_turning(carsThrough_N, 0)
-            self.state["cars"][0] -= carsThrough_N
-
             consume_turning(carsThrough_S, 1)
+
+            self.state["cars"][0] -= carsThrough_N
             self.state["cars"][1] -= carsThrough_S
 
-            carsThrough = carsThrough_N + carsThrough_S
-            carsThrough += right_turns
+            carsThrough = carsThrough_N + carsThrough_S + right_turns
 
             if duration > 5 and self.state["peds"][0] == True: 
                 helpedPeds = 1
@@ -195,13 +194,14 @@ class TrafficLightEnv(gym.Env):
 
             # Update queues
             consume_turning(carsThrough_E, 2)
-            self.state["cars"][2] -= carsThrough_E
-
             consume_turning(carsThrough_W, 3)
+
+            self.state["cars"][2] -= carsThrough_E
             self.state["cars"][3] -= carsThrough_W
 
-            carsThrough = carsThrough_E + carsThrough_W
-            carsThrough += right_turns
+
+            carsThrough = carsThrough_E + carsThrough_W + right_turns
+
 
             # Pedestrians crossing E-W
             if duration > 7 and self.state["peds"][1]:
@@ -213,6 +213,12 @@ class TrafficLightEnv(gym.Env):
         cars_EW = self.state["cars"][2] + self.state["cars"][3]
         fairness_gap = abs(cars_NS - cars_EW)
 
+        # Clamp negatives (right-turn-on-red may reduce early)
+        for i in range(4):
+            self.state["cars"][i] = max(self.state["cars"][i], 0)
+            self.left_turn[i] = max(self.left_turn[i], 0)
+            self.right_turn[i] = max(self.right_turn[i], 0)
+        
         # Add arriving cars and split into left/straight/right turn queues
         def add_arrivals(rate, idx):
             incoming = self.np_random.poisson(rate * duration)
