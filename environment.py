@@ -202,23 +202,22 @@ class TrafficLightEnv(gym.Env):
 
             carsThrough = carsThrough_E + carsThrough_W + right_turns
 
-
             # Pedestrians crossing E-W
             if duration > 7 and self.state["peds"][1]:
                 helpedPeds = 1
                 self.state["peds"][1] = False
-
-        # Fairness metrics: compare total NS vs total EW queues
-        cars_NS = self.state["cars"][0] + self.state["cars"][1]
-        cars_EW = self.state["cars"][2] + self.state["cars"][3]
-        fairness_gap = abs(cars_NS - cars_EW)
 
         # Clamp negatives (right-turn-on-red may reduce early)
         for i in range(4):
             self.state["cars"][i] = max(self.state["cars"][i], 0)
             self.left_turn[i] = max(self.left_turn[i], 0)
             self.right_turn[i] = max(self.right_turn[i], 0)
-        
+            
+        # Fairness metrics: compare total NS vs total EW queues
+        cars_NS = self.state["cars"][0] + self.state["cars"][1]
+        cars_EW = self.state["cars"][2] + self.state["cars"][3]
+        fairness_gap = abs(cars_NS - cars_EW)
+
         # Add arriving cars and split into left/straight/right turn queues
         def add_arrivals(rate, idx):
             incoming = self.np_random.poisson(rate * duration)
@@ -227,6 +226,7 @@ class TrafficLightEnv(gym.Env):
             left = math.floor(incoming * self.left_prob)
             right = math.floor(incoming * self.right_prob)
             straight = incoming - left - right
+            
             # update turning queues
             self.left_turn[idx] += left
             self.right_turn[idx] += right
@@ -239,18 +239,9 @@ class TrafficLightEnv(gym.Env):
         add_arrivals(self.eCarArrivalRate, 2)  # East
         add_arrivals(self.wCarArrivalRate, 3)  # West
 
-        #make sure not over the max
-        self.state["cars"][0] = min(self.state["cars"][0], self.maxCars)
-        self.state["cars"][1] = min(self.state["cars"][1], self.maxCars)
-        self.state["cars"][2] = min(self.state["cars"][2], self.maxCars)
-        self.state["cars"][3] = min(self.state["cars"][3], self.maxCars)
-
-        #make sure not negative
-        self.state["cars"][0] = max(self.state["cars"][0], 0)
-        self.state["cars"][1] = max(self.state["cars"][1], 0)
-        self.state["cars"][2] = max(self.state["cars"][2], 0)
-        self.state["cars"][3] = max(self.state["cars"][3], 0)
-
+        # Cap at max
+        for i in range(4):
+            self.state["cars"][i] = min(self.state["cars"][i], self.maxCars)
 
         #add people
         if self.np_random.random() <= self.pPedArrivesNS : 
@@ -260,10 +251,16 @@ class TrafficLightEnv(gym.Env):
             self.state["peds"][1] = True
 
         waitingCars = np.sum(self.state["cars"])
-        if (self.state["peds"][0] or self.state["peds"][1]) : 
-            waitingPeds = True
+        waitingPeds = self.state["peds"][0] or self.state["peds"][1]
 
-        reward = carsThrough + (5 * helpedPeds) - (0.1 * duration) - (.5 * waitingCars) - (5 * waitingPeds) - self.fairness_weight * fairness_gap
+        reward = (
+            carsThrough
+            + 5 * helpedPeds
+            - 0.1 * duration
+            - 0.5 * waitingCars
+            - 5 * waitingPeds
+            - self.fairness_weight * fairness_gap
+        )
 
         terminated = False  
         truncated = self.steps >= 100  
@@ -274,6 +271,7 @@ class TrafficLightEnv(gym.Env):
         info.update({
             "cars_served": carsThrough,
             "peds_served": helpedPeds,
+            "right_turns_on_red": right_turns,
             "light_direction": "N-S" if lightGreen == 0 else "E-W",
             "duration": duration,
             "waiting_cars": waitingCars,
