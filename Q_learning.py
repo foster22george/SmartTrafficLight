@@ -232,13 +232,13 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
 
     # Plot North-South and East-West waiting cars per episode
     plt.figure(figsize=(10, 6))
-    plt.plot(episode_ew_waiting_cars, label='East-West Waiting Cars', alpha=0.5)
-    plt.plot(episode_ns_waiting_cars, label='North-South Waiting Cars', alpha=0.5)
+    plt.plot(episode_ew_waiting_cars, color="blue", label='East-West Waiting Cars', alpha=0.5)
+    plt.plot(episode_ns_waiting_cars, color="orange", label='North-South Waiting Cars', alpha=0.5)
     if len(episode_fairness) > 10:
         #East-West
         window = min(50, len(episode_ew_waiting_cars)//5)
         moving_avg_ew = np.convolve(episode_ew_waiting_cars, np.ones(window)/window, mode='valid')
-        plt.plot(range(window-1, len(episode_ew_waiting_cars)), moving_avg_ew, color='red', label='Moving Average for East-West')
+        plt.plot(range(window-1, len(episode_ew_waiting_cars)), moving_avg_ew, color='navy', label='Moving Average for East-West')
         #North-South
         window = min(50, len(episode_ns_waiting_cars)//5)
         moving_avg_ns = np.convolve(episode_ns_waiting_cars, np.ones(window)/window, mode='valid')
