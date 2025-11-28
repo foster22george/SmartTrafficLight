@@ -128,6 +128,10 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
     episode_ns_waiting_cars = []
     episode_ew_waiting_cars = []
 
+    episode_ew_light_timing = []
+    episode_ns_light_timing = []
+
+
     print(f"{BOLD}Starting training for {num_episodes} episodes...{RESET}")
 
     for ep in tqdm(range(num_episodes)):
@@ -140,6 +144,9 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
         waiting_cars_sum = 0.0
         ew_waiting_cars_sum = 0.0
         ns_waiting_cars_sum = 0.0
+
+        ew_light_timing_sum = 0.0
+        ns_light_timing_sum = 0.0
 
         while not (terminated or truncated) and steps < MAX_STEPS:
             # Initialize Q and N entries
@@ -159,6 +166,14 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
             waiting_cars_sum += info["waiting_cars"]
             ns_waiting_cars_sum += info["cars_NS"]
             ew_waiting_cars_sum += info["cars_EW"]
+            if action[0] == 0 :
+                ew_light_timing_sum += (action[1] + 1) * 3
+                ns_light_timing_sum += ns_light_timing_sum / (steps + 1)
+
+            else :
+                ew_light_timing_sum += ew_light_timing_sum / (steps + 1)
+                ns_light_timing_sum +=  (action[1] + 1) * 3
+
             next_state = discretize_state(next_obs)
 
             if next_state not in Q_table:
@@ -186,11 +201,15 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
             episode_waiting_cars.append(waiting_cars_sum / steps)
             episode_ew_waiting_cars.append(ew_waiting_cars_sum / steps)
             episode_ns_waiting_cars.append(ns_waiting_cars_sum / steps)
+            episode_ew_light_timing.append(ew_light_timing_sum / steps)
+            episode_ns_light_timing.append(ns_light_timing_sum / steps)
         else:
             episode_fairness.append(0.0)
             episode_waiting_cars.append(0.0)
             episode_ew_waiting_cars.append(info["cars_EW"])
             episode_ns_waiting_cars.append(info["cars_NS"])
+            episode_ew_light_timing.append(0.0)
+            episode_ns_light_timing.append(0.0)
 
     print(f"{BOLD}Training complete!{RESET}")
 
@@ -250,6 +269,29 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
     plt.grid(alpha=0.3)
     plt.tight_layout()
     directional_waiting_cars_filename = f"results/plots/waiting_cars/waiting_cars{run_num}.png"
+    plt.savefig(directional_waiting_cars_filename, dpi=300)
+    plt.close()
+
+    #plotting light timing
+    plt.figure(figsize=(10, 6))
+    plt.plot(episode_ew_light_timing, color="blue", label='East-West Light Timing', alpha=0.5)
+    plt.plot(episode_ns_light_timing, color="orange", label='North-South Light Timing', alpha=0.5)
+    if len(episode_fairness) > 10:
+        #East-West
+        window = min(50, len(episode_ew_light_timing)//5)
+        moving_avg_ew = np.convolve(episode_ew_light_timing, np.ones(window)/window, mode='valid')
+        plt.plot(range(window-1, len(episode_ew_light_timing)), moving_avg_ew, color='navy', label='Moving Average for East-West')
+        #North-South
+        window = min(50, len(episode_ns_light_timing)//5)
+        moving_avg_ns = np.convolve(episode_ns_light_timing, np.ones(window)/window, mode='valid')
+        plt.plot(range(window-1, len(episode_ns_light_timing)), moving_avg_ns, color='red', label='Moving Average for North-South')
+    plt.title(f"North-South and East-West Light Timing per Episode (episodes={num_episodes})")
+    plt.xlabel("Episode")
+    plt.ylabel("Light Timing")
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    directional_waiting_cars_filename = f"results/plots/light_timing/lightTiming{run_num}.png"
     plt.savefig(directional_waiting_cars_filename, dpi=300)
     plt.close()
 
