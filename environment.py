@@ -265,6 +265,23 @@ class TrafficLightEnv(gym.Env):
         waitingCars = np.sum(self.state["cars"])
         waitingPeds = self.state["peds"][0] or self.state["peds"][1]
 
+        ''' reward = (
+            - 0.1 * duration
+            - 0.5 * waitingCars
+            - 5 * waitingPeds
+            - self.fairness_weight * fairness_gap
+            #oddly enough trying to make all rewards negative to avoid canceling out rewards decreases learning Check run 6 rewards graph
+        )
+        '''
+
+        reward = (
+            (helpedPeds * 10)
+            + (carsThrough * .75)
+            + (-5 * self.fairness_weight * fairness_gap)
+            # similarly trying to make all rewards positive to avoid canceling out rewards causes higher waiting times
+        )
+        
+        '''
         reward = (
             carsThrough
             + 5 * helpedPeds
@@ -273,6 +290,8 @@ class TrafficLightEnv(gym.Env):
             - 5 * waitingPeds
             - self.fairness_weight * fairness_gap
         )
+        '''
+            
 
         terminated = False  
         truncated = self.steps >= 100  
