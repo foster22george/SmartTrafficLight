@@ -42,6 +42,7 @@ results/plots/*
 !results/plots/rewards/
 !results/plots/fairness/
 !results/plots/waiting_cars/
+!results/plots/light_timing/
 
 results/q_tables/
 !results/q_tables/.DS_Store
