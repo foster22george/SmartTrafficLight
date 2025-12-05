@@ -131,6 +131,10 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
     episode_ew_light_timing = []
     episode_ns_light_timing = []
 
+    # As Raj said in presentation, check if cars are waiting for less per unit of time
+    episode_ew_car_wait_time = []
+    episode_ns_car_wait_time = []
+
 
     print(f"{BOLD}Starting training for {num_episodes} episodes...{RESET}")
 
@@ -147,6 +151,9 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
 
         ew_light_timing_sum = 0.0
         ns_light_timing_sum = 0.0
+
+        ew_car_wait_time_sum = 0.0
+        ns_car_wait_time_sum = 0.0
 
         while not (terminated or truncated) and steps < MAX_STEPS:
             # Initialize Q and N entries
@@ -169,10 +176,17 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
             if action[0] == 0 :
                 ew_light_timing_sum += (action[1] + 1) * 3
                 ns_light_timing_sum += ns_light_timing_sum / (steps + 1)
+                
+                ew_car_wait_time_sum += (info["cars_EW"] / (info["cars_served"] + 1)) * info["duration"]
+                ns_car_wait_time_sum += ns_car_wait_time_sum / (steps + 1)               
+
 
             else :
                 ew_light_timing_sum += ew_light_timing_sum / (steps + 1)
                 ns_light_timing_sum +=  (action[1] + 1) * 3
+                ew_car_wait_time_sum += ew_car_wait_time_sum / (steps + 1)               
+                ns_car_wait_time_sum += (info["cars_NS"] / (info["cars_served"]+ 1)) * info["duration"]
+
 
             next_state = discretize_state(next_obs)
 
@@ -203,6 +217,8 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
             episode_ns_waiting_cars.append(ns_waiting_cars_sum / steps)
             episode_ew_light_timing.append(ew_light_timing_sum / steps)
             episode_ns_light_timing.append(ns_light_timing_sum / steps)
+            episode_ew_car_wait_time.append(ew_car_wait_time_sum / steps)
+            episode_ns_car_wait_time.append(ns_car_wait_time_sum / steps)
         else:
             episode_fairness.append(0.0)
             episode_waiting_cars.append(0.0)
@@ -210,6 +226,9 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
             episode_ns_waiting_cars.append(info["cars_NS"])
             episode_ew_light_timing.append(0.0)
             episode_ns_light_timing.append(0.0)
+            episode_ew_car_wait_time.append(0.0)
+            episode_ns_car_wait_time.append(0.0)
+
 
     print(f"{BOLD}Training complete!{RESET}")
 
@@ -253,7 +272,7 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
     plt.figure(figsize=(10, 6))
     plt.plot(episode_ew_waiting_cars, color="blue", label='East-West Waiting Cars', alpha=0.5)
     plt.plot(episode_ns_waiting_cars, color="orange", label='North-South Waiting Cars', alpha=0.5)
-    if len(episode_fairness) > 10:
+    if len(episode_ns_waiting_cars) > 10:
         #East-West
         window = min(50, len(episode_ew_waiting_cars)//5)
         moving_avg_ew = np.convolve(episode_ew_waiting_cars, np.ones(window)/window, mode='valid')
@@ -276,7 +295,7 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
     plt.figure(figsize=(10, 6))
     plt.plot(episode_ew_light_timing, color="blue", label='East-West Light Timing', alpha=0.5)
     plt.plot(episode_ns_light_timing, color="orange", label='North-South Light Timing', alpha=0.5)
-    if len(episode_fairness) > 10:
+    if len(episode_ns_light_timing) > 10:
         #East-West
         window = min(50, len(episode_ew_light_timing)//5)
         moving_avg_ew = np.convolve(episode_ew_light_timing, np.ones(window)/window, mode='valid')
@@ -287,12 +306,36 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
         plt.plot(range(window-1, len(episode_ns_light_timing)), moving_avg_ns, color='red', label='Moving Average for North-South')
     plt.title(f"North-South and East-West Light Timing per Episode (episodes={num_episodes})")
     plt.xlabel("Episode")
-    plt.ylabel("Light Timing")
+    plt.ylabel("Light Timing (Seconds)")
     plt.legend()
     plt.grid(alpha=0.3)
     plt.tight_layout()
     directional_waiting_cars_filename = f"results/plots/light_timing/lightTiming{run_num}.png"
     plt.savefig(directional_waiting_cars_filename, dpi=300)
+    plt.close()
+
+
+    # Plot car wait times gap per episode
+    plt.figure(figsize=(10, 6))
+    plt.plot(episode_ew_car_wait_time, color="blue", label='East-West Car Wait Time', alpha=0.5)
+    plt.plot(episode_ns_car_wait_time, color="orange", label='North-South Car Wait Time', alpha=0.5)
+    if len(episode_ns_car_wait_time) > 10:
+        #East-West
+        window = min(50, len(episode_ew_car_wait_time)//5)
+        moving_avg_ew = np.convolve(episode_ew_car_wait_time, np.ones(window)/window, mode='valid')
+        plt.plot(range(window-1, len(episode_ew_car_wait_time)), moving_avg_ew, color='navy', label='Moving Average for East-West')
+        #North-South
+        window = min(50, len(episode_ns_car_wait_time)//5)
+        moving_avg_ns = np.convolve(episode_ns_car_wait_time, np.ones(window)/window, mode='valid')
+        plt.plot(range(window-1, len(episode_ns_car_wait_time)), moving_avg_ns, color='red', label='Moving Average for North-South')
+    plt.title(f"Average Car Wait Time per Episode (episodes={num_episodes})")
+    plt.xlabel("Episode")
+    plt.ylabel("Car Wait Time (Seconds))")
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    fair_plot_filename = f"results/plots/wait_times/car_waiting_time_{run_num}.png"
+    plt.savefig(fair_plot_filename, dpi=300)
     plt.close()
 
     return Q_table
