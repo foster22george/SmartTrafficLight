@@ -24,10 +24,10 @@ class TrafficLightEnv(gym.Env):
         super().__init__()
         
         self.maxCars = 20
-        self.nCarArrivalRate = 0.1
-        self.sCarArrivalRate = 0.1
-        self.eCarArrivalRate = 0.15
-        self.wCarArrivalRate = 0.15
+        self.nCarArrivalRate = 0.07
+        self.sCarArrivalRate = 0.07
+        self.eCarArrivalRate = 0.12
+        self.wCarArrivalRate = 0.12
         
         self.pPedArrivesNS = 0.2
         self.pPedArrivesEW = 0.1

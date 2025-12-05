@@ -177,15 +177,17 @@ def Q_learning(num_episodes=EPISODES, gamma=GAMMA, epsilon=EPSILON, decay_rate=D
                 ew_light_timing_sum += (action[1] + 1) * 3
                 ns_light_timing_sum += ns_light_timing_sum / (steps + 1)
                 
-                ew_car_wait_time_sum += (info["cars_EW"] / (info["cars_served"] + 1)) * info["duration"]
+                #should be the amount of rotations at the light (cars waiting / cars through) times the total duration (duration of ns light plus ew)
+                ew_car_wait_time_sum += ((info["cars_EW"] / (info["cars_served"] + 1)) - 1) * (((action[1] + 1) * 3) + (ns_light_timing_sum / (steps + 1)))
                 ns_car_wait_time_sum += ns_car_wait_time_sum / (steps + 1)               
 
 
             else :
                 ew_light_timing_sum += ew_light_timing_sum / (steps + 1)
                 ns_light_timing_sum +=  (action[1] + 1) * 3
+
                 ew_car_wait_time_sum += ew_car_wait_time_sum / (steps + 1)               
-                ns_car_wait_time_sum += (info["cars_NS"] / (info["cars_served"]+ 1)) * info["duration"]
+                ns_car_wait_time_sum += ((info["cars_NS"] / (info["cars_served"]+ 1)) - 1) * (((action[1] + 1) * 3) + (ew_light_timing_sum / (steps + 1)))
 
 
             next_state = discretize_state(next_obs)
