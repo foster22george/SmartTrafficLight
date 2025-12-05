@@ -24,13 +24,13 @@ class TrafficLightEnv(gym.Env):
         super().__init__()
         
         self.maxCars = 20
-        self.nCarArrivalRate = 0.15
-        self.sCarArrivalRate = 0.15
-        self.eCarArrivalRate = 0.2
-        self.wCarArrivalRate = 0.2
+        self.nCarArrivalRate = 0.1
+        self.sCarArrivalRate = 0.1
+        self.eCarArrivalRate = 0.15
+        self.wCarArrivalRate = 0.15
         
-        self.pPedArrivesNS = 0.33
-        self.pPedArrivesEW = 0.25
+        self.pPedArrivesNS = 0.2
+        self.pPedArrivesEW = 0.1
         
         self.fairness_weight = 0.25
         
@@ -276,7 +276,7 @@ class TrafficLightEnv(gym.Env):
 
         reward = (
             (helpedPeds * 10)
-            + (carsThrough * .75)
+            + (carsThrough * 1.25)
             + (-5 * self.fairness_weight * fairness_gap)
             
         )
