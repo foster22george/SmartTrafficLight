@@ -32,9 +32,9 @@ run_counter.txt
 ###############
 # Results (plots + Q-tables)
 ###############
-results/plots/rewards/*.png
-results/plots/fairness/*.png
-results/plots/waiting_cars/*.png
+#results/plots/rewards/*.png
+#results/plots/fairness/*.png
+#results/plots/waiting_cars/*.png
 results/q_tables/*.pickle
 
 # Allow directory structures but ignore files
